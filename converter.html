@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KML/GPX/FIT 转换工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .options-section {
+            background: #f8f9ff;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .options-section h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .converter-section {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.drag-over {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            color: #667eea;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .upload-hint {
+            color: #888;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .arrow-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .convert-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            white-space: nowrap;
+        }
+
+        .convert-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+
+        .convert-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .format-label {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .file-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9ff;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .file-info h3 {
+            color: #667eea;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .file-info p {
+            color: #555;
+            font-size: 13px;
+            margin: 4px 0;
+        }
+
+        .output-section {
+            margin-top: 30px;
+        }
+
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .output-header h2 {
+            color: #333;
+            font-size: 20px;
+        }
+
+        .download-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .download-btn.show {
+            display: flex;
+        }
+
+        .download-btn:hover {
+            background: #059669;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 300px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: vertical;
+            background: #f8f9fa;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+            font-size: 14px;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+            font-size: 14px;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .converter-section {
+                grid-template-columns: 1fr;
+            }
+
+            .arrow-section {
+                flex-direction: row;
+                justify-content: center;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗺️ KML / GPX / FIT 转换工具</h1>
+            <p>支持 KML、GPX、Google Earth (gx:Track) 和 FIT 格式</p>
+        </div>
+
+        <div class="main-content">
+            <div class="options-section">
+                <h3>⚙️ 转换选项</h3>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="mergeAllTracksCheckbox">
+                    <span>🔗 合并所有轨迹为一条（适用于分段轨迹）</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="removeAnnotationsCheckbox">
+                    <span>🗑️ 删除标注点（只保留轨迹，删除所有POI）</span>
+                </label>
+            </div>
+
+            <div class="converter-section">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">点击或拖拽上传文件</div>
+                    <div class="upload-hint">支持 .kml / .gpx / .fit 文件</div>
+                    <input type="file" id="fileInput" accept=".kml,.gpx,.fit">
+                </div>
+
+                <div class="arrow-section">
+                    <div class="format-label" id="sourceFormat">选择文件</div>
+                    <button class="convert-btn" id="convertBtn" disabled>转换 →</button>
+                    <div class="format-label" id="targetFormat">GPX</div>
+                </div>
+
+                <div class="upload-area">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">转换结果</div>
+                    <div class="upload-hint">转换后的文件将显示在这里</div>
+                </div>
+            </div>
+
+            <div class="file-info" id="fileInfo">
+                <h3>📊 文件信息</h3>
+                <p id="fileName"></p>
+                <p id="fileSize"></p>
+                <p id="fileType"></p>
+                <p id="pointCount"></p>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+
+            <div class="output-section">
+                <div class="output-header">
+                    <h2>📝 转换结果</h2>
+                    <button class="download-btn" id="downloadBtn">
+                        ⬇️ 下载文件
+                    </button>
+                </div>
+                <textarea id="outputContent" placeholder="转换后的内容将显示在这里..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // FIT 文件解析器
+        // ============================================
+        class FitParser {
+            constructor() {
+                this.records = [];
+                this.fileId = {};
+            }
+
+            parse(arrayBuffer) {
+                const dataView = new DataView(arrayView);
+                const data = new Uint8Array(arrayBuffer);
+                
+                // 解析文件头
+                const headerSize = data[0] || 14;
+                const protocolVersion = data[1];
+                const profileVersion = data[2] | (data[3] << 8);
+                const dataSize = data[4] | (data[5] << 8) | (data[6] << 16) | (data[7] << 24);
+                
+                let offset = headerSize;
+                const endOffset = headerSize + dataSize;
+                
+                while (offset < endOffset) {
+                    const recordHeader = data[offset];
+                    offset++;
+                    
+                    const isDefinition = (recordHeader & 0x40) !== 0;
+                    const localMessageType = recordHeader & 0x0F;
+                    
+                    if (isDefinition) {
+                        // 定义消息 - 跳过
+                        offset = this.skipDefinition(dataView, offset);
+                    } else {
+                        // 数据消息
+                        offset = this.parseDataMessage(dataView, offset, localMessageType);
+                    }
+                }
+                
+                return this.records;
+            }
+
+            skipDefinition(dataView, offset) {
+                const reserved = dataView.getUint8(offset);
+                const architecture = dataView.getUint8(offset + 1);
+                const isLittleEndian = architecture === 0;
+                
+                offset += 2;
+                const globalMsgNum = dataView.getUint16(offset, isLittleEndian);
+                offset += 2;
+                const numFields = dataView.getUint8(offset);
+                offset++;
+                
+                // 跳过字段定义
+                for (let i = 0; i < numFields; i++) {
+                    offset += 3; // num, size, baseType
+                }
+                
+                return offset;
+            }
+
+            parseDataMessage(dataView, offset, localMessageType) {
+                // 简化解析：只提取 record 消息 (type 20)
+                // 实际需要根据 globalMsgNum 判断
+                
+                // 这里需要维护 local message definition cache
+                // 为了简化，我们直接尝试解析常见的 record 格式
+                
+                // 读取可能的字段
+                let pos = offset;
+                
+                // 尝试解析 lat/lon (sint32, 4 bytes each)
+                try {
+                    const tempOffset = pos;
+                    pos += 4; // lat
+                    pos += 4; // lon
+                    pos += 4; // altitude
+                    pos += 2; // heart rate
+                    pos += 1; // cadence
+                    pos += 2; // distance
+                    pos += 4; // speed
+                    
+                    // 解析时间戳
+                    if (pos + 4 <= dataView.byteLength) {
+                        const timestamp = dataView.getUint32(pos, true);
+                        if (timestamp > 0) {
+                            // FIT 时间戳从 1990-01-01 开始
+                            const date = new Date((timestamp + 631065600) * 1000);
+                            this.records.push({
+                                timestamp: date.toISOString(),
+                                offset: tempOffset
+                            });
+                        }
+                    }
+                } catch (e) {
+                    // 忽略解析错误
+                }
+                
+                return offset + 28; // 假设固定大小
+            }
+        }
+
+        // 简化的 FIT 解析器（提取坐标数据）
+        function parseFitFile(arrayBuffer) {
+            const data = new Uint8Array(arrayBuffer);
+            const records = [];
+            
+            // FIT 文件头
+            const headerSize = data[0] || 14;
+            const dataSize = data[4] | (data[5] << 8) | (data[6] << 16) | (data[7] << 24);
+            
+            let offset = headerSize;
+            const endOffset = headerSize + dataSize;
+            
+            // 用于存储 record 消息的字段定义
+            const recordDefinitions = {};
+            let currentLocalMessageType = 0;
+            
+            while (offset < endOffset) {
+                if (offset >= data.length) break;
+                
+                const recordHeader = data[offset];
+                offset++;
+                
+                const isDefinition = (recordHeader & 0x40) !== 0;
+                const localMessageType = recordHeader & 0x0F;
+                
+                if (isDefinition) {
+                    // 定义消息
+                    const reserved = data[offset];
+                    const architecture = data[offset + 1];
+                    const isLittleEndian = architecture === 0;
+                    
+                    offset += 2;
+                    const globalMsgNum = dataView ? (() => {
+                        if (!dataView) {
+                            // 手动解析
+                            return data[offset] | (data[offset + 1] << 8);
+                        }
+                        return new DataView(arrayBuffer.slice(0)).getUint16(offset, isLittleEndian);
+                    })() : 0;
+                    offset += 2;
+                    
+                    // 临时保存定义
+                    const numFields = data[offset];
+                    offset++;
+                    
+                    // 保存 record 类型定义 (globalMsgNum = 20)
+                    if (globalMsgNum === 20) {
+                        recordDefinitions[localMessageType] = {
+                            architecture: isLittleEndian,
+                            fields: []
+                        };
+                        
+                        for (let i = 0; i < numFields; i++) {
+                            const fieldDefNum = data[offset];
+                            const fieldSize = data[offset + 1];
+                            const baseType = data[offset + 2];
+                            offset += 3;
+                            
+                            recordDefinitions[localMessageType].fields.push({
+                                num: fieldDefNum,
+                                size: fieldSize,
+                                baseType: baseType
+                            });
+                        }
+                    } else if (globalMsgNum === 0) {
+                        // file_id 消息
+                        for (let i = 0; i < numFields; i++) {
+                            offset += 3;
+                        }
+                    } else {
+                        // 其他类型，跳过字段定义
+                        for (let i = 0; i < numFields; i++) {
+                            offset += 3;
+                        }
+                    }
+                } else {
+                    // 数据消息
+                    const def = recordDefinitions[localMessageType];
+                    
+                    if (def && def.fields) {
+                        // 解析 record 数据
+                        const record = {};
+                        
+                        for (const field of def.fields) {
+                            const value = readFitValue(data, offset, field.size, field.baseType, def.architecture);
+                            
+                            // 字段编号对应关系
+                            // 0: lat (sint32)
+                            // 1: lon (sint32)
+                            // 2: alt (sint16)
+                            // 3: heart_rate (uint8)
+                            // 253: timestamp (uint32)
+                            // 29: cadence (uint8)
+                            // 5: distance (uint32)
+                            // 6: speed (uint16)
+                            // 7: power (uint16)
+                            // 19: temperature (sint8)
+                            
+                            if (field.num === 0) record.lat = value; // semicircles to degrees
+                            if (field.num === 1) record.lon = value;
+                            if (field.num === 2) record.alt = value;
+                            if (field.num === 3) record.hr = value;
+                            if (field.num === 29) record.cadence = value;
+                            if (field.num === 5) record.distance = value;
+                            if (field.num === 6) record.speed = value;
+                            if (field.num === 253) record.timestamp = value;
+                            if (field.num === 19) record.temp = value;
+                        }
+                        
+                        // 转换坐标
+                        if (record.lat !== undefined && record.lon !== undefined) {
+                            const lat = record.lat * (180 / Math.pow(2, 31));
+                            const lon = record.lon * (180 / Math.pow(2, 31));
+                            
+                            if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+                                const point = {
+                                    lat: lat,
+                                    lon: lon,
+                                    ele: record.alt !== undefined ? record.alt / 5 - 500 : null,
+                                    time: record.timestamp ? new Date((record.timestamp + 631065600) * 1000).toISOString() : null
+                                };
+                                records.push(point);
+                            }
+                        }
+                        
+                        // 更新偏移量（根据字段大小）
+                        for (const field of def.fields) {
+                            offset += field.size;
+                        }
+                    } else {
+                        // 没有定义，跳过一些字节
+                        offset += 24; // 假设固定大小
+                    }
+                }
+            }
+            
+            return records;
+        }
+
+        function readFitValue(data, offset, size, baseType, isLittleEndian) {
+            try {
+                switch (baseType & 0x1F) {
+                    case 0: // enum
+                    case 1: // sint8
+                        return data[offset];
+                    case 2: // uint8
+                        return data[offset];
+                    case 131: // sint16
+                        if (isLittleEndian) {
+                            return data[offset] | (data[offset + 1] << 8);
+                        } else {
+                            return (data[offset] << 8) | data[offset + 1];
+                        }
+                    case 132: // uint16
+                        if (isLittleEndian) {
+                            return data[offset] | (data[offset + 1] << 8);
+                        } else {
+                            return (data[offset] << 8) | data[offset + 1];
+                        }
+                    case 133: // sint32
+                        if (isLittleEndian) {
+                            return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24);
+                        } else {
+                            return (data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3];
+                        }
+                    case 134: // uint32
+                        if (isLittleEndian) {
+                            return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24);
+                        } else {
+                            return (data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3];
+                        }
+                    case 137: // float32
+                        const view = new DataView(data.buffer, data.byteOffset + offset, 4);
+                        return view.getFloat32(0, isLittleEndian);
+                    case 138: // float64
+                        const view64 = new DataView(data.buffer, data.byteOffset + offset, 8);
+                        return view64.getFloat64(0, isLittleEndian);
+                    default:
+                        return null;
+                }
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // 将 FIT 记录转换为 GPX
+        function fitToGpx(records, fileName = 'FIT Track') {
+            const gpxHeader = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="FIT-to-GPX-Converter"
+     xmlns="http://www.topografix.com/GPX/1/1"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+`;
+
+            let gpxBody = `  <trk>\n`;
+            gpxBody += `    <name>${escapeXml(fileName)}</name>\n`;
+            gpxBody += `    <trkseg>\n`;
+
+            for (const point of records) {
+                gpxBody += `      <trkpt lat="${point.lat}" lon="${point.lon}">\n`;
+                if (point.ele !== null) {
+                    gpxBody += `        <ele>${point.ele.toFixed(1)}</ele>\n`;
+                }
+                if (point.time) {
+                    gpxBody += `        <time>${point.time}</time>\n`;
+                }
+                gpxBody += `      </trkpt>\n`;
+            }
+
+            gpxBody += `    </trkseg>\n`;
+            gpxBody += `  </trk>\n`;
+
+            return gpxHeader + gpxBody + '</gpx>';
+        }
+
+        // ============================================
+        // 全局变量
+        // ============================================
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const convertBtn = document.getElementById('convertBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const outputContent = document.getElementById('outputContent');
+        const fileInfo = document.getElementById('fileInfo');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const sourceFormat = document.getElementById('sourceFormat');
+        const targetFormat = document.getElementById('targetFormat');
+
+        let currentFile = null;
+        let convertedContent = null;
+        let outputFormat = null;
+        let allPointsData = [];
+        let gxTrackCount = 0;
+
+        // 上传区域点击事件
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // 拖拽事件
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            handleFile(file);
+        });
+
+        // 文件选择事件
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            handleFile(file);
+        });
+
+        // 转换按钮事件
+        convertBtn.addEventListener('click', convertFile);
+
+        // 下载按钮事件
+        downloadBtn.addEventListener('click', downloadFile);
+
+        function handleFile(file) {
+            if (!file) return;
+
+            const ext = file.name.split('.').pop().toLowerCase();
+
+            if (ext !== 'kml' && ext !== 'gpx' && ext !== 'fit') {
+                showError('请上传 .kml、.gpx 或 .fit 格式的文件');
+                return;
+            }
+
+            currentFile = file;
+
+            // FIT 文件需要二进制读取
+            if (ext === 'fit') {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const arrayBuffer = e.target.result;
+                        const records = parseFitFile(arrayBuffer);
+                        
+                        if (records.length === 0) {
+                            showError('无法从 FIT 文件中提取轨迹数据');
+                            return;
+                        }
+                        
+                        currentFile.fitRecords = records;
+                        allPointsData = records;
+                        
+                        // 更新 UI
+                        sourceFormat.textContent = 'FIT';
+                        targetFormat.textContent = 'GPX';
+                        outputFormat = 'gpx';
+                        
+                        document.getElementById('fileName').textContent = `文件名: ${currentFile.name}`;
+                        document.getElementById('fileSize').textContent = `文件大小: ${formatFileSize(currentFile.size)}`;
+                        document.getElementById('fileType').textContent = `文件类型: FIT (Garmin)`;
+                        document.getElementById('pointCount').textContent = `轨迹点数: ${records.length}`;
+                        
+                        fileInfo.classList.add('show');
+                        convertBtn.disabled = false;
+                        hideError();
+                        hideSuccess();
+                    } catch (error) {
+                        showError('FIT 文件解析失败: ' + error.message);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+                return;
+            }
+
+            // KML/GPX 文件读取
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                parseFile(content, ext);
+            };
+            reader.readAsText(file);
+        }
+
+        function parseFile(content, format) {
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(content, 'text/xml');
+
+                // 检查解析错误
+                if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+                    throw new Error('XML 解析失败，请检查文件格式');
+                }
+
+                // 更新 UI
+                sourceFormat.textContent = format.toUpperCase();
+                targetFormat.textContent = format === 'kml' ? 'GPX' : 'KML';
+                outputFormat = format === 'kml' ? 'gpx' : 'kml';
+
+                // 统计信息
+                let pointCount = 0;
+                let trackCount = 0;
+                let waypointCount = 0;
+                gxTrackCount = 0;
+
+                // 使用命名空间感知的方式获取 gx:Track
+                const gxNamespace = 'http://www.google.com/kml/ext/2.2';
+                const allElements = xmlDoc.getElementsByTagName('*');
+                
+                for (let i = 0; i < allElements.length; i++) {
+                    const elem = allElements[i];
+                    if (elem.localName === 'Track') {
+                        gxTrackCount++;
+                        // 计算坐标数量
+                        const coords = elem.getElementsByTagName('gx:coord');
+                        pointCount += coords.length;
+                    }
+                }
+
+                if (format === 'kml') {
+                    trackCount = xmlDoc.getElementsByTagName('LineString').length + gxTrackCount;
+                    waypointCount = xmlDoc.getElementsByTagName('Point').length;
+                } else {
+                    pointCount = xmlDoc.getElementsByTagName('trkpt').length;
+                    trackCount = xmlDoc.getElementsByTagName('trk').length;
+                    waypointCount = xmlDoc.getElementsByTagName('wpt').length;
+                }
+
+                // 提取所有打卡点数据
+                allPointsData = extractAllPointsFromKml(xmlDoc);
+
+                document.getElementById('fileName').textContent = `文件名: ${currentFile.name}`;
+                document.getElementById('fileSize').textContent = `文件大小: ${formatFileSize(currentFile.size)}`;
+                document.getElementById('fileType').textContent = `文件类型: ${format.toUpperCase()}`;
+
+                let statsText = `轨迹点数: ${pointCount} | 轨迹数: ${trackCount} | 路点数: ${waypointCount}`;
+                if (gxTrackCount > 0) {
+                    statsText += ` | gx:Track: ${gxTrackCount} ⚡`;
+                }
+                document.getElementById('pointCount').textContent = statsText;
+
+                fileInfo.classList.add('show');
+
+                // 存储解析后的数据
+                currentFile.parsedData = xmlDoc;
+                currentFile.format = format;
+
+                convertBtn.disabled = false;
+                hideError();
+                hideSuccess();
+            } catch (error) {
+                showError('文件解析失败: ' + error.message);
+            }
+        }
+
+        function convertFile() {
+            try {
+                // FIT 文件转换
+                if (currentFile.format === 'fit' || (currentFile.fitRecords && currentFile.fitRecords.length > 0)) {
+                    const mergeAllTracks = document.getElementById('mergeAllTracksCheckbox').checked;
+                    let gpxContent = fitToGpx(allPointsData, currentFile.name.replace('.fit', ''));
+                    
+                    convertedContent = gpxContent;
+                    outputContent.value = formatXML(gpxContent);
+                    downloadBtn.classList.add('show');
+                    showSuccess(`转换成功！已将 FIT 转换为 GPX，共 ${allPointsData.length} 个轨迹点`);
+                    hideError();
+                    return;
+                }
+
+                const xmlDoc = currentFile.parsedData;
+                const sourceFormat = currentFile.format;
+                const mergeAllTracks = document.getElementById('mergeAllTracksCheckbox').checked;
+                const removeAnnotations = document.getElementById('removeAnnotationsCheckbox').checked;
+
+                let result = '';
+
+                if (sourceFormat === 'kml') {
+                    result = convertKmlToGpx(xmlDoc, mergeAllTracks, removeAnnotations);
+                } else {
+                    result = convertGpxToKml(xmlDoc, mergeAllTracks, removeAnnotations);
+                }
+
+                convertedContent = result;
+                outputContent.value = formatXML(result);
+
+                downloadBtn.classList.add('show');
+                showSuccess(`转换成功！已将 ${sourceFormat.toUpperCase()} 转换为 ${outputFormat.toUpperCase()}`);
+                hideError();
+            } catch (error) {
+                showError('转换失败: ' + error.message);
+            }
+        }
+
+        function convertKmlToGpx(kmlDoc, mergeAllTracks = false, removeAnnotations = false) {
+            const gpxHeader = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="KML-to-GPX-Converter"
+     xmlns="http://www.topografix.com/GPX/1/1"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+`;
+
+            let gpxBody = '';
+            let trackIndex = 0;
+            let mergedPointCount = 0;
+
+            // 获取所有 gx:Track 元素
+            const gxNamespace = 'http://www.google.com/kml/ext/2.2';
+            const allElements = kmlDoc.getElementsByTagName('*');
+            const gxTracks = [];
+            
+            for (let i = 0; i < allElements.length; i++) {
+                const elem = allElements[i];
+                if (elem.localName === 'Track') {
+                    gxTracks.push(elem);
+                }
+            }
+
+            if (mergeAllTracks && gxTracks.length > 0) {
+                // 合并所有 gx:Track 为一条轨迹
+                gpxBody += `  <trk>\n`;
+                gpxBody += `    <name>合并轨迹 (${gxTracks.length}条)</name>\n`;
+                gpxBody += `    <trkseg>\n`;
+                
+                for (let i = 0; i < gxTracks.length; i++) {
+                    const gxTrack = gxTracks[i];
+                    const coords = gxTrack.getElementsByTagName('gx:coord');
+                    const whens = gxTrack.getElementsByTagName('when');
+                    
+                    for (let j = 0; j < coords.length; j++) {
+                        const coordText = coords[j].textContent.trim();
+                        const parts = coordText.split(/\s+/);
+                        const lon = parseFloat(parts[0]);
+                        const lat = parseFloat(parts[1]);
+                        const ele = parts[2] ? parseFloat(parts[2]) : null;
+                        
+                        if (!isNaN(lon) && !isNaN(lat)) {
+                            gpxBody += `      <trkpt lat="${lat}" lon="${lon}">\n`;
+                            if (ele !== null && !isNaN(ele)) {
+                                gpxBody += `        <ele>${ele}</ele>\n`;
+                            }
+                            if (j < whens.length && whens[j].textContent.trim()) {
+                                gpxBody += `        <time>${whens[j].textContent.trim()}</time>\n`;
+                            }
+                            gpxBody += `      </trkpt>\n`;
+                            mergedPointCount++;
+                        }
+                    }
+                }
+                
+                gpxBody += `    </trkseg>\n`;
+                gpxBody += `  </trk>\n`;
+                
+                return gpxHeader + gpxBody + '</gpx>';
+            }
+
+            // 非合并模式：逐个处理 gx:Track
+            for (let i = 0; i < gxTracks.length; i++) {
+                const gxTrack = gxTracks[i];
+                const parentPlacemark = findParentPlacemark(gxTrack);
+                const trackName = parentPlacemark ? (getElementText(parentPlacemark, 'name') || `Track_${i + 1}`) : `Track_${i + 1}`;
+                const trackDesc = parentPlacemark ? getElementText(parentPlacemark, 'description') : '';
+
+                gpxBody += `  <trk>\n`;
+                gpxBody += `    <name>${escapeXml(trackName)}</name>\n`;
+                if (trackDesc) gpxBody += `    <desc>${escapeXml(trackDesc)}</desc>\n`;
+                gpxBody += `    <trkseg>\n`;
+
+                const coords = gxTrack.getElementsByTagName('gx:coord');
+                const whens = gxTrack.getElementsByTagName('when');
+
+                for (let j = 0; j < coords.length; j++) {
+                    const coordText = coords[j].textContent.trim();
+                    const parts = coordText.split(/\s+/);
+                    const lon = parseFloat(parts[0]);
+                    const lat = parseFloat(parts[1]);
+                    const ele = parts[2] ? parseFloat(parts[2]) : null;
+                    
+                    if (!isNaN(lon) && !isNaN(lat)) {
+                        gpxBody += `      <trkpt lat="${lat}" lon="${lon}">\n`;
+                        if (ele !== null && !isNaN(ele)) {
+                            gpxBody += `        <ele>${ele}</ele>\n`;
+                        }
+                        if (j < whens.length && whens[j].textContent.trim()) {
+                            gpxBody += `        <time>${whens[j].textContent.trim()}</time>\n`;
+                        }
+                        gpxBody += `      </trkpt>\n`;
+                    }
+                }
+
+                gpxBody += `    </trkseg>\n`;
+                gpxBody += `  </trk>\n`;
+                trackIndex++;
+            }
+
+            // 处理 Placemarks（非 gx:Track）
+            const placemarks = kmlDoc.getElementsByTagName('Placemark');
+
+            for (let i = 0; i < placemarks.length; i++) {
+                const placemark = placemarks[i];
+                
+                // 跳过包含 gx:Track 的 Placemark
+                if (placemark.getElementsByTagName('gx:Track').length > 0) continue;
+                
+                // 检查是否只包含 Point（标注点）
+                const hasPoint = placemark.getElementsByTagName('Point').length > 0;
+                const hasLineString = placemark.getElementsByTagName('LineString').length > 0;
+                
+                // 如果只含 Point 且需要删除标注点，则跳过
+                if (removeAnnotations && hasPoint && !hasLineString) {
+                    continue;
+                }
+                
+                const name = getElementText(placemark, 'name') || `Track_${trackIndex + 1}`;
+                const description = getElementText(placemark, 'description');
+
+                // 处理 Point (路点)
+                if (hasPoint) {
+                    const coords = getElementText(placemark, 'coordinates');
+                    if (coords) {
+                        const [lon, lat, alt] = coords.trim().split(',').map(Number);
+                        if (!isNaN(lon) && !isNaN(lat)) {
+                            gpxBody += `  <wpt lat="${lat}" lon="${lon}">\n`;
+                            gpxBody += `    <name>${escapeXml(name)}</name>\n`;
+                            if (description) gpxBody += `    <desc>${escapeXml(description)}</desc>\n`;
+                            if (!isNaN(alt)) gpxBody += `    <ele>${alt}</ele>\n`;
+                            gpxBody += `  </wpt>\n`;
+                        }
+                    }
+                }
+
+                // 处理 LineString
+                const lineStrings = placemark.getElementsByTagName('LineString');
+                for (let ls = 0; ls < lineStrings.length; ls++) {
+                    const lineString = lineStrings[ls];
+                    const coords = getElementText(lineString, 'coordinates');
+                    if (coords && coords.trim()) {
+                        gpxBody += `  <trk>\n`;
+                        gpxBody += `    <name>${escapeXml(name)}${lineStrings.length > 1 ? '_' + (ls + 1) : ''}</name>\n`;
+                        if (description) gpxBody += `    <desc>${escapeXml(description)}</desc>\n`;
+                        gpxBody += `    <trkseg>\n`;
+
+                        const coordArray = coords.trim().split(/[\s\n]+/).filter(c => c.trim());
+                        for (const coord of coordArray) {
+                            const parts = coord.split(',').map(Number);
+                            if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                                const [lon, lat, alt] = parts;
+                                gpxBody += `      <trkpt lat="${lat}" lon="${lon}">\n`;
+                                if (!isNaN(alt)) gpxBody += `        <ele>${alt}</ele>\n`;
+                                gpxBody += `      </trkpt>\n`;
+                            }
+                        }
+
+                        gpxBody += `    </trkseg>\n`;
+                        gpxBody += `  </trk>\n`;
+                        trackIndex++;
+                    }
+                }
+            }
+
+            return gpxHeader + gpxBody + '</gpx>';
+        }
+
+        function convertGpxToKml(gpxDoc, mergeAllTracks = false, removeAnnotations = false) {
+            const kmlHeader = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+`;
+
+            let kmlBody = '';
+
+            // 处理 waypoints (路点)
+            if (!removeAnnotations) {
+                const waypoints = gpxDoc.getElementsByTagName('wpt');
+                for (let i = 0; i < waypoints.length; i++) {
+                    const wpt = waypoints[i];
+                    const lat = wpt.getAttribute('lat');
+                    const lon = wpt.getAttribute('lon');
+                    const name = getElementText(wpt, 'name') || `Waypoint_${i + 1}`;
+                    const desc = getElementText(wpt, 'desc');
+                    const ele = getElementText(wpt, 'ele');
+
+                    kmlBody += `    <Placemark>\n`;
+                    kmlBody += `      <name>${escapeXml(name)}</name>\n`;
+                    if (desc) kmlBody += `      <description>${escapeXml(desc)}</description>\n`;
+                    kmlBody += `      <Point>\n`;
+                    kmlBody += `        <coordinates>${lon},${lat}${ele ? ',' + ele : ',0'}</coordinates>\n`;
+                    kmlBody += `      </Point>\n`;
+                    kmlBody += `    </Placemark>\n`;
+                }
+            }
+
+            // 处理 tracks (轨迹)
+            const tracks = gpxDoc.getElementsByTagName('trk');
+
+            // 检查是否需要合并所有轨迹
+            if (mergeAllTracks && tracks.length > 1) {
+                kmlBody += `    <Placemark>\n`;
+                kmlBody += `      <name>合并轨迹 (${tracks.length}条)</name>\n`;
+                kmlBody += `      <LineString>\n`;
+                kmlBody += `        <coordinates>`;
+
+                let coordStr = '';
+                for (let i = 0; i < tracks.length; i++) {
+                    const trkpts = tracks[i].getElementsByTagName('trkpt');
+                    for (let j = 0; j < trkpts.length; j++) {
+                        const trkpt = trkpts[j];
+                        const lat = trkpt.getAttribute('lat');
+                        const lon = trkpt.getAttribute('lon');
+                        const ele = getElementText(trkpt, 'ele') || '0';
+                        coordStr += `${lon},${lat},${ele} `;
+                    }
+                }
+                kmlBody += coordStr.trim();
+
+                kmlBody += `</coordinates>\n`;
+                kmlBody += `      </LineString>\n`;
+                kmlBody += `    </Placemark>\n`;
+
+                return kmlHeader + kmlBody + '  </Document>\n</kml>';
+            }
+
+            // 逐个处理轨迹
+            for (let i = 0; i < tracks.length; i++) {
+                const trk = tracks[i];
+                const name = getElementText(trk, 'name') || `Track_${i + 1}`;
+                const desc = getElementText(trk, 'desc');
+                const trkpts = trk.getElementsByTagName('trkpt');
+
+                if (trkpts.length > 0) {
+                    kmlBody += `    <Placemark>\n`;
+                    kmlBody += `      <name>${escapeXml(name)}</name>\n`;
+                    if (desc) kmlBody += `      <description>${escapeXml(desc)}</description>\n`;
+                    kmlBody += `      <LineString>\n`;
+                    kmlBody += `        <coordinates>`;
+
+                    let coordStr = '';
+                    for (let j = 0; j < trkpts.length; j++) {
+                        const trkpt = trkpts[j];
+                        const lat = trkpt.getAttribute('lat');
+                        const lon = trkpt.getAttribute('lon');
+                        const ele = getElementText(trkpt, 'ele') || '0';
+                        coordStr += `${lon},${lat},${ele} `;
+                    }
+                    kmlBody += coordStr.trim();
+
+                    kmlBody += `</coordinates>\n`;
+                    kmlBody += `      </LineString>\n`;
+                    kmlBody += `    </Placemark>\n`;
+                }
+            }
+
+            // 处理 routes
+            const routes = gpxDoc.getElementsByTagName('rte');
+            for (let i = 0; i < routes.length; i++) {
+                const rte = routes[i];
+                const name = getElementText(rte, 'name') || `Route_${i + 1}`;
+                const desc = getElementText(rte, 'desc');
+                const rtepts = rte.getElementsByTagName('rtept');
+
+                if (rtepts.length > 0) {
+                    kmlBody += `    <Placemark>\n`;
+                    kmlBody += `      <name>${escapeXml(name)}</name>\n`;
+                    if (desc) kmlBody += `      <description>${escapeXml(desc)}</description>\n`;
+                    kmlBody += `      <LineString>\n`;
+                    kmlBody += `        <coordinates>`;
+
+                    let coordStr = '';
+                    for (let j = 0; j < rtepts.length; j++) {
+                        const rtept = rtepts[j];
+                        const lat = rtept.getAttribute('lat');
+                        const lon = rtept.getAttribute('lon');
+                        const ele = getElementText(rtept, 'ele') || '0';
+                        coordStr += `${lon},${lat},${ele} `;
+                    }
+                    kmlBody += coordStr.trim();
+
+                    kmlBody += `</coordinates>\n`;
+                    kmlBody += `      </LineString>\n`;
+                    kmlBody += `    </Placemark>\n`;
+                }
+            }
+
+            return kmlHeader + kmlBody + '  </Document>\n</kml>';
+        }
+
+        function extractAllPointsFromKml(kmlDoc) {
+            const points = [];
+            const placemarks = kmlDoc.getElementsByTagName('Placemark');
+
+            for (let i = 0; i < placemarks.length; i++) {
+                const placemark = placemarks[i];
+                const name = getElementText(placemark, 'name') || `Point_${i + 1}`;
+
+                // 处理 gx:Track
+                const gxTracks = placemark.getElementsByTagName('gx:Track');
+                for (let t = 0; t < gxTracks.length; t++) {
+                    const gxTrack = gxTracks[t];
+                    const coords = gxTrack.getElementsByTagName('gx:coord');
+                    const whens = gxTrack.getElementsByTagName('when');
+
+                    for (let j = 0; j < coords.length; j++) {
+                        const coordText = coords[j].textContent.trim();
+                        const parts = coordText.split(/\s+/);
+                        const lon = parseFloat(parts[0]);
+                        const lat = parseFloat(parts[1]);
+                        const ele = parts[2] ? parseFloat(parts[2]) : null;
+                        
+                        if (!isNaN(lon) && !isNaN(lat)) {
+                            points.push({
+                                name: `${name}_${j + 1}`,
+                                lon: lon,
+                                lat: lat,
+                                ele: ele,
+                                time: j < whens.length ? whens[j].textContent.trim() : null
+                            });
+                        }
+                    }
+                }
+
+                // 处理 Point
+                const point = placemark.getElementsByTagName('Point')[0];
+                if (point) {
+                    const coords = getElementText(point, 'coordinates');
+                    if (coords) {
+                        const [lon, lat, alt] = coords.trim().split(',').map(Number);
+                        if (!isNaN(lon) && !isNaN(lat)) {
+                            points.push({
+                                name: name,
+                                lon: lon,
+                                lat: lat,
+                                ele: !isNaN(alt) ? alt : null,
+                                time: null
+                            });
+                        }
+                    }
+                }
+
+                // 处理 LineString
+                const lineStrings = placemark.getElementsByTagName('LineString');
+                for (let ls = 0; ls < lineStrings.length; ls++) {
+                    const lineString = lineStrings[ls];
+                    const coords = getElementText(lineString, 'coordinates');
+                    if (coords && coords.trim()) {
+                        const coordArray = coords.trim().split(/[\s\n]+/).filter(c => c.trim());
+                        for (let j = 0; j < coordArray.length; j++) {
+                            const parts = coordArray[j].split(',').map(Number);
+                            if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                                points.push({
+                                    name: `${name}_${j + 1}`,
+                                    lon: parts[0],
+                                    lat: parts[1],
+                                    ele: parts[2] || null,
+                                    time: null
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            return points;
+        }
+
+        function findParentPlacemark(element) {
+            let parent = element.parentNode;
+            while (parent) {
+                if (parent.tagName === 'Placemark') {
+                    return parent;
+                }
+                parent = parent.parentNode;
+            }
+            return null;
+        }
+
+        function getElementText(parent, tagName) {
+            const elem = parent.getElementsByTagName(tagName)[0];
+            return elem ? elem.textContent : '';
+        }
+
+        function escapeXml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;')
+                      .replace(/'/g, '&apos;');
+        }
+
+        function formatXML(xml) {
+            const PADDING = ' '.repeat(2);
+            const reg = /(>)(<)(\/*)/g;
+            let formatted = '';
+
+            xml = xml.replace(reg, '$1\r\n$2$3');
+
+            let lines = xml.split('\r\n');
+            let indent = 0;
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if (!line) continue;
+
+                if (line.startsWith('</')) {
+                    indent -= 1;
+                }
+
+                formatted += PADDING.repeat(indent) + line + '\n';
+
+                if (line.startsWith('<') && !line.startsWith('</') && !line.includes('/>')) {
+                    indent += 1;
+                }
+            }
+
+            return formatted.trim();
+        }
+
+        function downloadFile() {
+            if (!convertedContent) return;
+
+            const blob = new Blob([convertedContent], { type: 'application/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+
+            const originalName = currentFile.name.replace(/\.[^/.]+$/, '');
+            a.href = url;
+            a.download = `${originalName}_converted.${outputFormat}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+        }
+
+        function hideError() {
+            errorMessage.classList.remove('show');
+        }
+
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.classList.add('show');
+        }
+
+        function hideSuccess() {
+            successMessage.classList.remove('show');
+        }
+    </script>
+</body>
+</html>
